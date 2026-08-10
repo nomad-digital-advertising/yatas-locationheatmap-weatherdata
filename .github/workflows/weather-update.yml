@@ -1,0 +1,56 @@
+name: Daily Weather Update
+
+on:
+  schedule:
+    # TSİ (UTC+3) her gece 00:05'te çalışır (UTC saatine göre 21:05)
+    - cron: '5 21 * * *'
+  workflow_dispatch:
+
+jobs:
+  update-weather:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Fetch and Structure Weather Data
+        run: |
+          API_KEY="${{ secrets.WEATHER_API_KEY }}"
+
+          ISTANBUL_DATA=$(curl -s "https://api.openweathermap.org/data/2.5/weather?q=Istanbul,tr&units=metric&appid=${API_KEY}")
+          IZMIR_DATA=$(curl -s "https://api.openweathermap.org/data/2.5/weather?q=Izmir,tr&units=metric&appid=${API_KEY}")
+          ANTALYA_DATA=$(curl -s "https://api.openweathermap.org/data/2.5/weather?q=Antalya,tr&units=metric&appid=${API_KEY}")
+          BODRUM_DATA=$(curl -s "https://api.openweathermap.org/data/2.5/weather?q=Bodrum,tr&units=metric&appid=${API_KEY}")
+          SANLIURFA_DATA=$(curl -s "https://api.openweathermap.org/data/2.5/weather?q=Sanliurfa,tr&units=metric&appid=${API_KEY}")
+
+          jq -n \
+            --argjson istanbul "$ISTANBUL_DATA" \
+            --argjson izmir "$IZMIR_DATA" \
+            --argjson antalya "$ANTALYA_DATA" \
+            --argjson bodrum "$BODRUM_DATA" \
+            --argjson sanliurfa "$SANLIURFA_DATA" \
+            '{
+              "istanbul": $istanbul,
+              "izmir": $izmir,
+              "antalya": $antalya,
+              "bodrum": $bodrum,
+              "sanliurfa": $sanliurfa
+            }' > weather.json
+
+      - name: Commit & Push Changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          git add weather.json
+          
+          if git diff --staged --quiet; then
+            echo "Değişiklik yok."
+          else
+            git commit -m "chore: auto update multi-city weather.json [skip ci]"
+            git push
+          fi
