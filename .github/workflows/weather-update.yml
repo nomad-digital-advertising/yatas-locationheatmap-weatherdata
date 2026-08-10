@@ -17,7 +17,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Fetch and Structure Weather Data
+      - name: Fetch and Structure Simple Weather Data
         run: |
           API_KEY="${{ secrets.WEATHER_API_KEY }}"
 
@@ -34,11 +34,11 @@ jobs:
             --argjson bodrum "$BODRUM_DATA" \
             --argjson sanliurfa "$SANLIURFA_DATA" \
             '{
-              "istanbul": $istanbul,
-              "izmir": $izmir,
-              "antalya": $antalya,
-              "bodrum": $bodrum,
-              "sanliurfa": $sanliurfa
+              "istanbul": ($istanbul.main.temp_max | round),
+              "izmir": ($izmir.main.temp_max | round),
+              "antalya": ($antalya.main.temp_max | round),
+              "bodrum": ($bodrum.main.temp_max | round),
+              "sanliurfa": ($sanliurfa.main.temp_max | round)
             }' > weather.json
 
       - name: Commit & Push Changes
@@ -51,6 +51,6 @@ jobs:
           if git diff --staged --quiet; then
             echo "Değişiklik yok."
           else
-            git commit -m "chore: auto update multi-city weather.json [skip ci]"
+            git commit -m "chore: auto update simplified weather.json [skip ci]"
             git push
           fi
